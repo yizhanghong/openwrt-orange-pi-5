@@ -30,8 +30,8 @@ apply_common_patches() {
 
 # List of directories to apply patches (add more directories as needed)
 dirs=(
-  "package/kernel/rtl8812au-ct/src"
-  "package/kernel/mt76/src" # Example for mt76 driver
+  "/workdir/openwrt/package/kernel/rtl8812au-ct/src"
+  "/workdir/openwrt/package/kernel/mt76/src" # Example for mt76 driver
   # Add other directories here
 )
 
