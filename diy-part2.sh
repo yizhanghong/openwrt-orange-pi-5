@@ -18,3 +18,24 @@
 
 # Modify hostname
 #sed -i 's/OpenWrt/P3TERX-Router/g' package/base-files/files/bin/config_generate
+
+# Function to apply common patches
+apply_common_patches() {
+  local dir=$1
+  if [ -d "$dir" ]; then
+    sed -i '1i#include <linux/completion.h>' "$dir/include/osdep_service_linux.h"
+    sed -i '/thread_exit()/a return 0;' "$dir/core/rtw_cmd.c"
+  fi
+}
+
+# List of directories to apply patches (add more directories as needed)
+dirs=(
+  "package/kernel/rtl8812au-ct/src"
+  "package/kernel/mt76/src" # Example for mt76 driver
+  # Add other directories here
+)
+
+# Apply patches to all listed directories
+for dir in "${dirs[@]}"; do
+  apply_common_patches "$dir"
+done
