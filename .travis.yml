@@ -1,0 +1,113 @@
+language: minimal
+dist: focal
+
+env:
+  global:
+    - REPO_URL=https://github.com/coolsnowwolf/lede
+    - REPO_BRANCH=master
+    - FEEDS_CONF=feeds.conf.default
+    - CONFIG_FILE=.config
+    - DIY_P1_SH=diy-part1.sh
+    - DIY_P2_SH=diy-part2.sh
+    - UPLOAD_BIN_DIR=false
+    - UPLOAD_FIRMWARE=true
+    - UPLOAD_RELEASE=true
+    - TZ=Asia/Shanghai
+
+before_install:
+  - sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+  - sudo docker image prune --all --force
+  - sudo -E apt-get -qq update
+  - sudo -E apt-get -qq install ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libfuse-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libpython3-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev
+  - sudo -E apt-get -qq autoremove --purge
+  - sudo -E apt-get -qq clean
+  - sudo timedatectl set-timezone "$TZ"
+  - sudo mkdir -p /workdir
+  - sudo chown $USER:$GROUPS /workdir
+
+script:
+  - df -hT $PWD
+  - git clone $REPO_URL -b $REPO_BRANCH openwrt
+  - ln -sf /workdir/openwrt $TRAVIS_BUILD_DIR/openwrt
+
+  - |
+    if [ -e $FEEDS_CONF ]; then
+      mv $FEEDS_CONF openwrt/feeds.conf.default
+    fi
+    chmod +x $DIY_P1_SH
+    cd openwrt
+    $TRAVIS_BUILD_DIR/$DIY_P1_SH
+
+  - cd openwrt && ./scripts/feeds update -a
+  - cd openwrt && ./scripts/feeds install -a
+
+  - |
+    if [ -e files ]; then
+      mv files openwrt/files
+    fi
+    if [ -e $CONFIG_FILE ]; then
+      mv $CONFIG_FILE openwrt/.config
+    fi
+    chmod +x $DIY_P2_SH
+    cd openwrt
+    $TRAVIS_BUILD_DIR/$DIY_P2_SH
+
+  - cd openwrt
+  - make defconfig
+  - make download -j8
+  - find dl -size -1024c -exec ls -l {} \;
+  - find dl -size -1024c -exec rm -f {} \;
+
+  - cd openwrt
+  - echo -e "$(nproc) thread compile"
+  - make -j$(nproc) || make -j1 || make -j1 V=s
+  - grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+  - |
+    if [ -s DEVICE_NAME ]; then
+      export DEVICE_NAME=_$(cat DEVICE_NAME)
+    fi
+  - export FILE_DATE=_$(date +"%Y%m%d%H%M")
+
+  - df -hT
+
+  - |
+    if [ "$UPLOAD_BIN_DIR" == "true" ]; then
+      echo "Uploading bin directory"
+      # Upload bin directory logic here
+    fi
+
+  - |
+    if [ "$UPLOAD_FIRMWARE" == "true" ]; then
+      cd openwrt/bin/targets/*/*
+      rm -rf packages
+      export FIRMWARE=$PWD
+    fi
+
+  - |
+    if [ "$UPLOAD_FIRMWARE" == "true" ]; then
+      echo "Uploading firmware directory"
+      # Upload firmware directory logic here
+    fi
+
+  - |
+    if [ "$UPLOAD_RELEASE" == "true" ]; then
+      export RELEASE_TAG=$(date +"%Y.%m.%d-%H%M")
+      touch release.txt
+      # Additional logic for release notes here
+    fi
+
+  - |
+    if [ "$UPLOAD_RELEASE" == "true" ]; then
+      echo "Uploading to GitHub release"
+      # Upload to GitHub release logic here
+    fi
+
+  - |
+    echo "Deleting old workflow runs"
+    # Delete old workflow runs logic here
+
+  - |
+    if [ "$UPLOAD_RELEASE" == "true" ]; then
+      echo "Removing old releases"
+      # Remove old releases logic here
+    fi
