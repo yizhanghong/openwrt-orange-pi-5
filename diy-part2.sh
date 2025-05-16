@@ -39,3 +39,7 @@ dirs=(
 for dir in "${dirs[@]}"; do
   apply_common_patches "$dir"
 done
+
+echo '修改dts'
+rm -rf target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/rk3588-armsom-sige7.dts
+cp -f $GITHUB_WORKSPACE/imb3588.dts target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/rk3588-armsom-sige7.dts
